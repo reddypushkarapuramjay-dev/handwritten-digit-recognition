@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Handwritten Digit Recognition using Neural Network - Draw or upload a digit to get AI predictions">
+    <title>Handwritten Digit Recognition | Neural Network Demo</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top" id="mainNav">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="#home">
+                <i class="bi bi-cpu-fill me-2 fs-3"></i>
+                <span class="fw-bold">DigitRecognizer</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#home">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#draw">Try It</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#how-it-works">How It Works</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#about">About</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero-section">
+        <div class="container">
+            <div class="row align-items-center min-vh-100">
+                <div class="col-lg-7 hero-content">
+                    <div class="hero-badge mb-3">
+                        <i class="bi bi-stars me-1"></i>
+                        <span>AI-Powered Digit Recognition</span>
+                    </div>
+                    <h1 class="display-3 fw-bold mb-4">
+                        Recognize Handwritten Digits<br>with <span class="text-gradient">Neural Networks</span>
+                    </h1>
+                    <p class="lead mb-4">
+                        Draw a digit (0-9) or upload an image. Our trained Artificial Neural Network 
+                        will predict the digit with confidence scores. Built with PyTorch and deployed with Flask.
+                    </p>
+                    <div class="d-flex flex-wrap gap-3">
+                        <a href="#draw" class="btn btn-primary btn-lg px-4">
+                            <i class="bi bi-pencil-fill me-2"></i>Start Drawing
+                        </a>
+                        <a href="#how-it-works" class="btn btn-outline-light btn-lg px-4">
+                            <i class="bi bi-info-circle me-2"></i>Learn How It Works
+                        </a>
+                    </div>
+                    <div class="hero-stats mt-5">
+                        <div class="stat-item">
+                            <span class="stat-number">98%+</span>
+                            <span class="stat-label">Test Accuracy</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">109K</span>
+                            <span class="stat-label">Parameters</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">3</span>
+                            <span class="stat-label">Layers</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number"><50ms</span>
+                            <span class="stat-label">Inference Time</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-5 hero-visual">
+                    <div class="floating-card">
+                        <div class="card-preview">
+                            <canvas id="previewCanvas" width="200" height="200"></canvas>
+                            <div class="preview-prediction">
+                                <span class="pred-label">Prediction:</span>
+                                <span class="pred-value" id="previewPrediction">?</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="scroll-indicator">
+            <i class="bi bi-chevron-down"></i>
+        </div>
+    </section>
+
+    <!-- Drawing Section -->
+    <section id="draw" class="section-padding bg-light">
+        <div class="container">
+            <div class="row">
+                <div class="col-12 text-center mb-5">
+                    <h2 class="section-title">Try It Yourself</h2>
+                    <p class="section-subtitle">Draw a digit below or upload an image to see the neural network in action</p>
+                </div>
+            </div>
+            
+            <div class="row g-4">
+                <!-- Drawing Canvas -->
+                <div class="col-lg-7">
+                    <div class="card tool-card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-pencil me-2"></i>Drawing Canvas</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="canvas-container">
+                                <canvas id="drawingCanvas" width="400" height="400"></canvas>
+                            </div>
+                            <div class="canvas-controls mt-3">
+                                <div class="brush-size-control mb-3">
+                                    <label class="form-label fw-medium">Brush Size: <span id="brushSizeValue">20</span>px</label>
+                                    <input type="range" class="form-range" id="brushSize" min="5" max="40" value="20">
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button class="btn btn-primary btn-lg flex-grow-1" id="predictBtn" onclick="predictDrawing()">
+                                        <i class="bi bi-cpu me-2"></i><span class="btn-text">Predict Digit</span>
+                                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-lg" id="clearBtn" onclick="clearCanvas()">
+                                        <i class="bi bi-eraser me-2"></i>Clear
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Image Upload -->
+                <div class="col-lg-5">
+                    <div class="card tool-card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-upload me-2"></i>Upload Image</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="upload-area" id="uploadArea">
+                                <input type="file" id="fileInput" accept="image/png,image/jpeg,image/jpg,image/gif,image/bmp" hidden>
+                                <i class="bi bi-cloud-upload fs-1 text-muted mb-3"></i>
+                                <p class="mb-2">Drag & drop or click to upload</p>
+                                <p class="text-muted small">PNG, JPG, JPEG, GIF, BMP (max 16MB)</p>
+                            </div>
+                            <div id="imagePreview" class="d-none mt-3">
+                                <img id="previewImg" src="" alt="Preview" class="img-fluid rounded">
+                                <div class="mt-2 d-flex gap-2">
+                                    <button class="btn btn-primary flex-grow-1" onclick="predictUpload()">
+                                        <i class="bi bi-cpu me-2"></i><span class="btn-text">Predict</span>
+                                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                                    </button>
+                                    <button class="btn btn-outline-secondary" onclick="clearUpload()">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Prediction Results -->
+            <div class="row g-4 mt-4" id="resultsSection" style="display: none;">
+                <div class="col-12">
+                    <div class="card result-card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Prediction Results</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <!-- Main Prediction -->
+                                <div class="col-md-4 text-center mb-3 mb-md-0">
+                                    <div class="prediction-circle" id="predictionCircle">
+                                        <span id="predictedDigit">?</span>
+                                    </div>
+                                    <div class="mt-3">
+                                        <p class="text-muted mb-1">Confidence</p>
+                                        <h3 id="confidenceValue">0%</h3>
+                                    </div>
+                                </div>
+                                
+                                <!-- Probability Bars -->
+                                <div class="col-md-8">
+                                    <h6 class="mb-3">Class Probabilities</h6>
+                                    <div id="probabilityBars"></div>
+                                </div>
+                            </div>
+                            <div class="text-center mt-4">
+                                <button class="btn btn-outline-primary" onclick="resetPrediction()">
+                                    <i class="bi bi-arrow-clockwise me-2"></i>Try Another
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="section-padding">
+        <div class="container">
+            <div class="row">
+                <div class="col-12 text-center mb-5">
+                    <h2 class="section-title">How It Works</h2>
+                    <p class="section-subtitle">Understanding the neural network behind the predictions</p>
+                </div>
+            </div>
+            
+            <div class="row g-4">
+                <!-- Architecture Diagram -->
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>Network Architecture</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="architecture-diagram">
+                                <img src="{{ url_for('static', filename='images/architecture_diagram.png') }}" 
+                                     alt="Neural Network Architecture" class="img-fluid rounded">
+                            </div>
+                            <div class="architecture-layers mt-4">
+                                <div class="layer-item">
+                                    <span class="layer-badge bg-success">Input Layer</span>
+                                    <div class="layer-info">
+                                        <strong>784 Neurons</strong> (28×28 pixels)
+                                        <br><small class="text-muted">Each pixel value (0-255) normalized to [-1, 1]</small>
+                                    </div>
+                                </div>
+                                <div class="layer-arrow"><i class="bi bi-chevron-down"></i></div>
+                                <div class="layer-item">
+                                    <span class="layer-badge bg-primary">Hidden Layer 1</span>
+                                    <div class="layer-info">
+                                        <strong>128 Neurons</strong> + ReLU Activation
+                                        <br><small class="text-muted">Learns basic features (edges, curves)</small>
+                                    </div>
+                                </div>
+                                <div class="layer-arrow"><i class="bi bi-chevron-down"></i></div>
+                                <div class="layer-item">
+                                    <span class="layer-badge bg-warning">Hidden Layer 2</span>
+                                    <div class="layer-info">
+                                        <strong>64 Neurons</strong> + ReLU Activation
+                                        <br><small class="text-muted">Combines features into digit parts</small>
+                                    </div>
+                                </div>
+                                <div class="layer-arrow"><i class="bi bi-chevron-down"></i></div>
+                                <div class="layer-item">
+                                    <span class="layer-badge bg-danger">Output Layer</span>
+                                    <div class="layer-info">
+                                        <strong>10 Neurons</strong> (Digits 0-9)
+                                        <br><small class="text-muted">Softmax gives probability for each digit</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Concept Explanations -->
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Key Concepts</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="accordion" id="conceptsAccordion">
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#concept1">
+                                            <i class="bi bi-grid-3x3-gap me-2"></i><strong>1. Input Layer</strong>
+                                        </button>
+                                    </h2>
+                                    <div id="concept1" class="accordion-collapse collapse show" data-bs-parent="#conceptsAccordion">
+                                        <div class="accordion-body">
+                                            The input layer receives the 28×28 pixel image flattened into 784 values. Each neuron represents one pixel's intensity. Before feeding to the network, pixel values (0-255) are normalized using MNIST statistics (mean=0.1307, std=0.3081) so the network trains faster.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#concept2">
+                                            <i class="bi bi-layers me-2"></i><strong>2. Hidden Layers</strong>
+                                        </button>
+                                    </h2>
+                                    <div id="concept2" class="accordion-collapse collapse" data-bs-parent="#conceptsAccordion">
+                                        <div class="accordion-body">
+                                            Hidden layers are the "thinking" layers between input and output. Our network has two: 128 neurons then 64 neurons. Each neuron computes a weighted sum of all inputs from the previous layer, adds a bias, and applies an activation function. Early layers detect simple patterns (edges, lines); deeper layers combine these into complex shapes (loops, corners).
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#concept3">
+                                            <i class="bi bi-circle me-2"></i><strong>3. Neurons</strong>
+                                        </button>
+                                    </h2>
+                                    <div id="concept3" class="accordion-collapse collapse" data-bs-parent="#conceptsAccordion">
+                                        <div class="accordion-body">
+                                            A neuron is the basic computing unit. It receives multiple inputs, multiplies each by a learned weight, sums them up, adds a bias term, and passes the result through an activation function. Think of it as a tiny decision-maker that "fires" when its weighted input exceeds a threshold.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#concept4">
+                                            <i class="bi bi-sliders me-2"></i><strong>4. Weights & Biases</strong>
+                                        </button>
+                                    </h2>
+                                    <div id="concept4" class="accordion-collapse collapse" data-bs-parent="#conceptsAccordion">
+                                        <div class="accordion-body">
+                                            <strong>Weights</strong> determine how important each input is to a neuron. <strong>Biases</strong> allow neurons to shift their activation threshold. During training, the network adjusts these ~109,000 parameters to minimize prediction errors. This is what "learning" means in a neural network.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#concept5">
+                                            <i class="bi bi-graph-up me-2"></i><strong>5. ReLU Activation</strong>
+                                        </button>
+                                    </h2>
+                                    <div id="concept5" class="accordion-collapse collapse" data-bs-parent="#conceptsAccordion">
+                                        <div class="accordion-body">
+                                            ReLU (Rectified Linear Unit): <code>f(x) = max(0, x)</code>. It outputs the input directly if positive, otherwise zero. This introduces non-linearity, allowing the network to learn complex patterns. Without activation functions, a neural network would just be a linear regression model, no matter how many layers.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#concept6">
+                                            <i class="bi bi-arrow-right-circle me-2"></i><strong>6. Forward Propagation</strong>
+                                        </button>
+                                    </h2>
+                                    <div id="concept6" class="accordion-collapse collapse" data-bs-parent="#conceptsAccordion">
+                                        <div class="accordion-body">
+                                            Forward propagation is the process of passing input data through the network layer by layer to get a prediction. Each layer transforms the data: <code>output = activation(weights × input + bias)</code>. The final output gives raw scores (logits) for each digit class.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#concept7">
+                                            <i class="bi bi-x-circle me-2"></i><strong>7. Loss Function</strong>
+                                        </button>
+                                    </h2>
+                                    <div id="concept7" class="accordion-collapse collapse" data-bs-parent="#conceptsAccordion">
+                                        <div class="accordion-body">
+                                            CrossEntropyLoss measures how wrong the prediction is. It combines LogSoftmax and NLLLoss: it applies softmax to convert logits to probabilities, then computes negative log likelihood of the correct class. Lower loss = better predictions. The network's goal during training is to minimize this loss.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#concept8">
+                                            <i class="bi bi-arrow-left-circle me-2"></i><strong>8. Backpropagation</strong>
+                                        </button>
+                                    </h2>
+                                    <div id="concept8" class="accordion-collapse collapse" data-bs-parent="#conceptsAccordion">
+                                        <div class="accordion-body">
+                                            Backpropagation computes gradients of the loss with respect to each weight using the chain rule. It flows backward from output to input, telling each weight how to change to reduce error. The optimizer (Adam) then updates weights: <code>weight = weight - learning_rate × gradient</code>. This repeats for many epochs until convergence.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#concept9">
+                                            <i class="bi bi-check-circle me-2"></i><strong>9. Model Prediction</strong>
+                                        </button>
+                                    </h2>
+                                    <div id="concept9" class="accordion-collapse collapse" data-bs-parent="#conceptsAccordion">
+                                        <div class="accordion-body">
+                                            After training, for inference we only do forward propagation. The output logits are passed through Softmax to get probabilities summing to 1. The digit with highest probability is the prediction. Confidence is that probability × 100%. The network generalizes to new handwritten digits it never saw during training!
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="section-padding bg-light">
+        <div class="container">
+            <div class="row">
+                <div class="col-12 text-center mb-5">
+                    <h2 class="section-title">About This Project</h2>
+                    <p class="section-subtitle">Technical details and educational purpose</p>
+                </div>
+            </div>
+            
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-3">
+                    <div class="card feature-card h-100 text-center">
+                        <div class="card-body">
+                            <div class="feature-icon bg-success">
+                                <i class="bi bi-code-slash"></i>
+                            </div>
+                            <h5 class="mt-3">Pure PyTorch</h5>
+                            <p class="text-muted small">Built from scratch using PyTorch tensors and autograd - no high-level APIs hiding the details.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="card feature-card h-100 text-center">
+                        <div class="card-body">
+                            <div class="feature-icon bg-primary">
+                                <i class="bi bi-hdd-network"></i>
+                            </div>
+                            <h5 class="mt-3">Real MNIST Training</h5>
+                            <p class="text-muted small">Trained on 60,000 MNIST training images, tested on 10,000 test images with ~98% accuracy.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="card feature-card h-100 text-center">
+                        <div class="card-body">
+                            <div class="feature-icon bg-warning">
+                                <i class="bi bi-cpu"></i>
+                            </div>
+                            <h5 class="mt-3">CPU Optimized</h5>
+                            <p class="text-muted small">Runs inference on CPU only - compatible with free hosting tiers (Render, Railway, etc.).</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="card feature-card h-100 text-center">
+                        <div class="card-body">
+                            <div class="feature-icon bg-danger">
+                                <i class="bi bi-graph-up"></i>
+                            </div>
+                            <h5 class="mt-3">Visual Analytics</h5>
+                            <p class="text-muted small">Training curves, confusion matrices, and probability distributions generated automatically.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row g-4 mt-4">
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-terminal me-2"></i>Tech Stack</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <strong>Backend:</strong>
+                                    <ul class="mb-0 small">
+                                        <li>Python 3.8+</li>
+                                        <li>PyTorch 2.0+</li>
+                                        <li>Flask 2.3+</li>
+                                        <li>Gunicorn (production)</li>
+                                    </ul>
+                                </div>
+                                <div class="col-6">
+                                    <strong>Data & ML:</strong>
+                                    <ul class="mb-0 small">
+                                        <li>torchvision (MNIST)</li>
+                                        <li>NumPy, Pandas</li>
+                                        <li>scikit-learn (metrics)</li>
+                                        <li>Matplotlib, Seaborn</li>
+                                    </ul>
+                                </div>
+                                <div class="col-6">
+                                    <strong>Frontend:</strong>
+                                    <ul class="mb-0 small">
+                                        <li>HTML5 Canvas API</li>
+                                        <li>Bootstrap 5.3</li>
+                                        <li>Vanilla JavaScript</li>
+                                        <li>Bootstrap Icons</li>
+                                    </ul>
+                                </div>
+                                <div class="col-6">
+                                    <strong>Deployment:</strong>
+                                    <ul class="mb-0 small">
+                                        <li>Render Free Tier</li>
+                                        <li>Docker ready</li>
+                                        <li>CPU-only inference</li>
+                                        <li>Auto HTTPS</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-book me-2"></i>Educational Value</h5>
+                        </div>
+                        <div class="card-body">
+                            <p>This project demonstrates fundamental deep learning concepts in a complete, working application:</p>
+                            <ul>
+                                <li><strong>End-to-end ML pipeline:</strong> Data loading → Preprocessing → Training → Evaluation → Deployment</li>
+                                <li><strong>Neural network fundamentals:</strong> Forward/backward propagation, activation functions, loss functions, optimization</li>
+                                <li><strong>Production practices:</strong> Model serialization, inference optimization, error handling, input validation</li>
+                                <li><strong>Web integration:</strong> REST API design, frontend-backend communication, real-time UX</li>
+                            </ul>
+                            <div class="alert alert-info mt-3">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Disclaimer:</strong> This is an educational project for learning purposes. 
+                                The model is a simple ANN (not a CNN) and achieves ~98% accuracy on MNIST. 
+                                For production digit recognition, CNNs or transformer-based models would be more appropriate.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-4 mb-4 mb-lg-0">
+                    <h5><i class="bi bi-cpu-fill me-2"></i>DigitRecognizer</h5>
+                    <p class="text-muted">A beginner-friendly neural network project for handwritten digit recognition using PyTorch and Flask.</p>
+                </div>
+                <div class="col-lg-4 mb-4 mb-lg-0">
+                    <h5>Technologies</h5>
+                    <ul class="list-unstyled">
+                        <li><i class="bi bi-chevron-right me-2"></i>Python, PyTorch, Flask</li>
+                        <li><i class="bi bi-chevron-right me-2"></i>NumPy, Pandas, scikit-learn</li>
+                        <li><i class="bi bi-chevron-right me-2"></i>Matplotlib, Seaborn</li>
+                        <li><i class="bi bi-chevron-right me-2"></i>Bootstrap 5, HTML5 Canvas</li>
+                    </ul>
+                </div>
+                <div class="col-lg-4">
+                    <h5>Links</h5>
+                    <ul class="list-unstyled">
+                        <li><i class="bi bi-github me-2"></i><a href="#" class="text-muted">GitHub Repository</a></li>
+                        <li><i class="bi bi-box-arrow-up-right me-2"></i><a href="#" class="text-muted">Live Demo (Render)</a></li>
+                        <li><i class="bi bi-file-earmark-text me-2"></i><a href="#" class="text-muted">Documentation</a></li>
+                    </ul>
+                </div>
+            </div>
+            <hr class="my-4">
+            <div class="row align-items-center">
+                <div class="col-md-6 text-center text-md-start">
+                    <p class="mb-0 text-muted small">
+                        &copy; 2024 Handwritten Digit Recognition Project. Educational use only.
+                    </p>
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    <p class="mb-0 text-muted small">
+                        Built with <i class="bi bi-heart-fill text-danger"></i> for learning Deep Learning
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
