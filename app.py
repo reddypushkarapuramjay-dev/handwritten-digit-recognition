@@ -40,7 +40,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max upload
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MODEL_PATH'] = os.path.join('models', 'handwritten_digit_model.pth')
 
-# Global model variable (loaded once at startup)
+# Global model variable (loaded once at startup per worker)
 model = None
 device = None
 model_loaded = False
@@ -51,6 +51,7 @@ def load_model_at_startup():
     """
     Load the trained model when the application starts.
     This avoids loading the model for every prediction request.
+    Called at module import time so it works with both Flask dev server and Gunicorn.
     """
     global model, device, model_loaded, model_error
     
@@ -91,6 +92,12 @@ def load_model_at_startup():
         import traceback
         traceback.print_exc()
         return False
+
+
+# Load model at module import time so it works with both
+# Flask development server and Gunicorn workers.
+# Each Gunicorn worker will load the model once at startup.
+load_model_at_startup()
 
 
 def predict_digit(image_tensor):
@@ -313,9 +320,8 @@ if __name__ == '__main__':
     print("HANDWRITTEN DIGIT RECOGNITION - FLASK APP")
     print("=" * 60)
     
-    # Load model at startup
-    print("\nLoading model...")
-    load_model_at_startup()
+    # Model is already loaded at module import time (above)
+    # This block only runs with Flask development server (not Gunicorn)
     
     if not model_loaded:
         print("\nWARNING: Model not loaded!")
@@ -325,12 +331,14 @@ if __name__ == '__main__':
     else:
         print("\nModel loaded successfully!")
     
-    print("\nStarting Flask server...")
-    print("Access the app at: http://localhost:5000")
+    print("\nStarting Flask development server...")
+    # Use PORT environment variable (for Render compatibility) or default to 5000
+    port = int(os.environ.get('PORT', 5000))
+    print(f"Access the app at: http://localhost:{port}")
     print("Press Ctrl+C to stop")
     print("=" * 60)
     
-    # Run Flask app
+    # Run Flask app (development only)
     # For production deployment, use gunicorn instead:
-    # gunicorn --bind 0.0.0.0:5000 app:app
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120 app:app
+    app.run(host='0.0.0.0', port=port, debug=True)
