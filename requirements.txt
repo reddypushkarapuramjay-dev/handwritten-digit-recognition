@@ -1,6 +1,6 @@
 # Handwritten Digit Recognition - Python Dependencies
 # Core ML Framework (CPU-only for free hosting compatibility)
---index-url https://download.pytorch.org/whl/cpu
+--extra-index-url https://download.pytorch.org/whl/cpu
 torch
 torchvision
 torchaudio
